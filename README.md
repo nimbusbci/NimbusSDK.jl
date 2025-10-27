@@ -128,7 +128,6 @@ save_model(model, "models/custom_model.jld2")
 ## Pricing & Licensing
 
 Visit [nimbusbci.com](https://nimbusbci.com) for:
-- Free trial (14 days)
 - Academic licenses
 - Commercial licenses
 - Enterprise plans
