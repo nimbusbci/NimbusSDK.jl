@@ -1,14 +1,21 @@
 name = "NimbusSDK"
-uuid = "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+uuid = "343eba5b-4fb9-46a4-8530-c5c9f738ed2c"
 authors = ["Nimbus BCI Team <hello@nimbusbci.com>"]
 version = "0.1.0"
 
 [deps]
-Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [compat]
 julia = "1.9"
 HTTP = "1"
 JSON3 = "1"
+Pkg = "1.9"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
