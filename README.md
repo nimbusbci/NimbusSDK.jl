@@ -122,8 +122,8 @@ save_model(model, "models/custom_model.jld2")
 
 - **Full Documentation**: [docs.nimbusbci.com](https://docs.nimbusbci.com)
 - **API Reference**: [docs.nimbusbci.com/api](https://docs.nimbusbci.com/api)
-- **Examples**: [github.com/nimbusbci/NimbusSDK-Examples](https://github.com/nimbusbci/NimbusSDK-Examples)
-- **Preprocessing Guide**: [docs.nimbusbci.com/preprocessing](https://docs.nimbusbci.com/preprocessing)
+- **Examples**: [docs.nimbusbci.com/examples/basic-examples](https://docs.nimbusbci.com/examples/basic-examples)
+- **Preprocessing Guide**: [docs.nimbusbci.com/inference-configuration/preprocessing-requirements](https://docs.nimbusbci.com/inference-configuration/preprocessing-requirements)
 
 ## Pricing & Licensing
 
