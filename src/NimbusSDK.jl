@@ -1,0 +1,290 @@
+"""
+    NimbusSDK
+
+Public wrapper for the commercial NimbusSDK Brain-Computer Interface toolkit.
+
+This package provides an interface to install and use the proprietary NimbusSDKCore.
+A valid license key from https://nimbusbci.com is required.
+
+# Installation
+
+```julia
+using Pkg
+Pkg.add("NimbusSDK")
+
+using NimbusSDK
+NimbusSDK.install_core("your-api-key-here")
+```
+
+# Usage
+
+After installing the core, simply:
+
+```julia
+using NimbusSDK
+
+model = load_model(RxLDAModel, "motor_imagery_4class")
+results = predict_batch(model, your_data)
+```
+
+See https://docs.nimbusbci.com for full documentation.
+"""
+module NimbusSDK
+
+using Pkg
+using HTTP
+using JSON3
+
+export install_core, check_installation
+export authenticate, predict_batch, load_model, save_model, train_model, calibrate_model
+export BCIData, BCIMetadata, RxLDAModel, RxGMMModel
+export init_streaming, process_chunk, finalize_trial
+export calculate_ITR, assess_trial_quality
+
+const CORE_UUID = Base.UUID("7f0e55c9-9b21-4dfb-bad7-255af8c37e2b")
+const CORE_NAME = "NimbusSDKCore"
+const API_BASE = "https://api.nimbusbci.com"
+const GITHUB_ORG = "nimbusbci"
+
+"""
+    install_core(api_key::String; force=false)
+
+Install the proprietary NimbusSDKCore package using your license key.
+
+# Arguments
+- `api_key::String`: Your NimbusSDK API key from https://nimbusbci.com/dashboard
+- `force::Bool`: If true, reinstall even if already installed
+
+# Example
+```julia
+using NimbusSDK
+NimbusSDK.install_core("nbci_live_your_key_here")
+```
+"""
+function install_core(api_key::String; force::Bool=false)
+    # Check if already installed
+    if !force && is_core_installed()
+        @info "NimbusSDKCore already installed. Use force=true to reinstall."
+        return true
+    end
+    
+    println("\n╔════════════════════════════════════════╗")
+    println("║   🚀 Installing NimbusSDKCore          ║")
+    println("╚════════════════════════════════════════╝\n")
+    
+    # Step 1: Validate API key
+    println("[1/4] Validating license key...")
+    license_info = validate_license(api_key)
+    if !license_info.valid
+        error("Invalid license key. Please check your key at https://nimbusbci.com/dashboard")
+    end
+    println("  ✓ License valid: $(license_info.license_type)")
+    
+    # Step 2: Get GitHub access token
+    println("\n[2/4] Obtaining repository access...")
+    github_token = get_github_token(api_key)
+    println("  ✓ Access granted")
+    
+    # Step 3: Configure Git
+    println("\n[3/4] Configuring Git access...")
+    setup_git_credentials(github_token)
+    println("  ✓ Git configured")
+    
+    # Step 4: Install packages
+    println("\n[4/4] Installing NimbusSDKCore...")
+    
+    try
+        # Add private registry
+        registry_url = "https://github.com/$(GITHUB_ORG)/NimbusRegistry"
+        try
+            Pkg.Registry.add(Pkg.RegistrySpec(url=registry_url))
+        catch e
+            # Registry might already exist
+            @debug "Registry add failed (may already exist)" exception=e
+        end
+        
+        # Install core package
+        Pkg.add(CORE_NAME)
+        
+        # Save API key for future use
+        save_api_key(api_key)
+        
+        println("\n✅ Installation complete!")
+        println("\nYou can now use NimbusSDK:")
+        println("  julia> using NimbusSDK")
+        println("  julia> model = load_model(RxLDAModel, \"model_name\")")
+        println("\nDocumentation: https://docs.nimbusbci.com")
+        
+        return true
+    catch e
+        println("\n❌ Installation failed: $e")
+        println("\nPlease contact hello@nimbusbci.com for support.")
+        return false
+    end
+end
+
+"""
+    check_installation() -> Bool
+
+Check if NimbusSDKCore is installed and accessible.
+"""
+function check_installation()
+    if is_core_installed()
+        try
+            @eval using NimbusSDKCore
+            version = NimbusSDKCore.VERSION
+            println("✓ NimbusSDKCore $version is installed and ready")
+            return true
+        catch e
+            println("⚠ NimbusSDKCore is installed but failed to load: $e")
+            return false
+        end
+    else
+        println("✗ NimbusSDKCore is not installed")
+        println("\nInstall with:")
+        println("  NimbusSDK.install_core(\"your-api-key\")")
+        return false
+    end
+end
+
+# Internal helper functions
+
+function is_core_installed()
+    try
+        # Check if package exists in any depot
+        spec = Pkg.PackageSpec(; uuid=CORE_UUID)
+        Pkg.status(spec; io=devnull)
+        return true
+    catch
+        return false
+    end
+end
+
+function validate_license(api_key::String)
+    try
+        response = HTTP.post(
+            "$(API_BASE)/auth/validate",
+            ["Content-Type" => "application/json"],
+            JSON3.write(Dict("api_key" => api_key));
+            status_exception=false
+        )
+        
+        if response.status == 200
+            data = JSON3.read(response.body)
+            return (valid=true, license_type=data.license_type, features=data.features)
+        else
+            return (valid=false, license_type=nothing, features=nothing)
+        end
+    catch e
+        @warn "License validation failed" exception=e
+        # Fallback to basic format check
+        if startswith(api_key, "nbci_") && length(api_key) > 20
+            @warn "Using offline mode - API validation failed but key format is valid"
+            return (valid=true, license_type=:unknown, features=Symbol[])
+        end
+        return (valid=false, license_type=nothing, features=nothing)
+    end
+end
+
+function get_github_token(api_key::String)
+    try
+        response = HTTP.post(
+            "$(API_BASE)/installer/github-token",
+            ["Content-Type" => "application/json"],
+            JSON3.write(Dict("api_key" => api_key));
+            status_exception=false
+        )
+        
+        if response.status == 200
+            data = JSON3.read(response.body)
+            return data.github_token
+        else
+            error("Failed to obtain GitHub access token")
+        end
+    catch e
+        error("Failed to contact license server: $e")
+    end
+end
+
+function setup_git_credentials(github_token::String)
+    try
+        # Configure credential helper
+        run(pipeline(`git config --global credential.helper store`, devnull))
+        
+        # Write credentials
+        credentials_path = expanduser("~/.git-credentials")
+        credentials = "https://$(github_token)@github.com\n"
+        write(credentials_path, credentials)
+        chmod(credentials_path, 0o600)
+    catch e
+        @warn "Failed to configure Git credentials" exception=e
+    end
+end
+
+function save_api_key(api_key::String)
+    try
+        config_dir = joinpath(homedir(), ".nimbus")
+        mkpath(config_dir)
+        
+        config_file = joinpath(config_dir, "credentials.toml")
+        config_content = """
+        # NimbusSDK Credentials
+        
+        [nimbus]
+        api_key = "$api_key"
+        """
+        
+        write(config_file, config_content)
+        chmod(config_file, 0o600)
+    catch e
+        @warn "Failed to save API key" exception=e
+    end
+end
+
+# Conditional loading and re-export from Core
+function __init__()
+    if is_core_installed()
+        try
+            # Try to load the core package
+            @eval begin
+                using NimbusSDKCore
+                
+                # Re-export everything from core
+                for name in names(NimbusSDKCore; all=false)
+                    if name != :NimbusSDKCore
+                        @eval const $(name) = NimbusSDKCore.$(name)
+                    end
+                end
+            end
+            
+            @info "NimbusSDK ready" version=NimbusSDKCore.VERSION
+        catch e
+            @warn """
+            NimbusSDKCore is installed but failed to load.
+            
+            This might happen if:
+            - The package needs to be rebuilt
+            - There's a version mismatch
+            
+            Try reinstalling:
+                NimbusSDK.install_core(YOUR_API_KEY; force=true)
+            
+            Error: $e
+            """
+        end
+    else
+        @info """
+        NimbusSDK - Commercial BCI Toolkit
+        
+        To use this package, you need to install the proprietary core:
+        
+            using NimbusSDK
+            NimbusSDK.install_core("your-api-key")
+        
+        Get your API key at: https://nimbusbci.com/dashboard
+        Documentation: https://docs.nimbusbci.com
+        """
+    end
+end
+
+end # module NimbusSDK
