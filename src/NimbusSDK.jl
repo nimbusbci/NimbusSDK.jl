@@ -246,31 +246,32 @@ function __init__()
     if is_core_installed()
         try
             # Try to load the core package
-            @eval begin
-                using NimbusSDKCore
-                
-                # Re-export everything from core
-                for name in names(NimbusSDKCore; all=false)
-                    if name != :NimbusSDKCore
-                        @eval const $(name) = NimbusSDKCore.$(name)
-                    end
+            @eval using NimbusSDKCore
+            
+            # Re-export everything from core
+            for sym in names(NimbusSDKCore; all=false)
+                if sym != :NimbusSDKCore
+                    @eval const $(sym) = NimbusSDKCore.$(sym)
                 end
             end
             
             @info "NimbusSDK ready" version=NimbusSDKCore.VERSION
         catch e
-            @warn """
-            NimbusSDKCore is installed but failed to load.
-            
-            This might happen if:
-            - The package needs to be rebuilt
-            - There's a version mismatch
-            
-            Try reinstalling:
-                NimbusSDK.install_core(YOUR_API_KEY; force=true)
-            
-            Error: $e
-            """
+            # Only warn if it's not the expected "not in dependencies" error
+            if !occursin("does not have NimbusSDKCore in its dependencies", string(e))
+                @warn """
+                NimbusSDKCore is installed but failed to load.
+                
+                This might happen if:
+                - The package needs to be rebuilt
+                - There's a version mismatch
+                
+                Try reinstalling:
+                    NimbusSDK.install_core(YOUR_API_KEY; force=true)
+                
+                Error: $e
+                """
+            end
         end
     else
         @info """
