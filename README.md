@@ -121,7 +121,7 @@ save_model(model, "models/custom_model.jld2")
 ## Documentation
 
 - **Full Documentation**: [docs.nimbusbci.com](https://docs.nimbusbci.com)
-- **API Reference**: [docs.nimbusbci.com/api](https://docs.nimbusbci.com/api)
+- **API Reference**: [docs.nimbusbci.com/api-reference/introduction](https://docs.nimbusbci.com/api-reference/introduction)
 - **Examples**: [docs.nimbusbci.com/examples/basic-examples](https://docs.nimbusbci.com/examples/basic-examples)
 - **Preprocessing Guide**: [docs.nimbusbci.com/inference-configuration/preprocessing-requirements](https://docs.nimbusbci.com/inference-configuration/preprocessing-requirements)
 
