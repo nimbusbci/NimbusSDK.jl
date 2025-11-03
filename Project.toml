@@ -1,7 +1,7 @@
 name = "NimbusSDK"
 uuid = "343eba5b-4fb9-46a4-8530-c5c9f738ed2c"
 authors = ["Nimbus BCI Team <hello@nimbusbci.com>"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
