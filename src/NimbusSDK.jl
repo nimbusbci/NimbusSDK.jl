@@ -97,14 +97,27 @@ function install_core(api_key::String; force::Bool=false)
         # Add private registry
         registry_url = "https://github.com/$(GITHUB_ORG)/NimbusRegistry"
         try
-            Pkg.Registry.add(Pkg.RegistrySpec(url=registry_url))
-        catch e
-            # Registry might already exist
-            @debug "Registry add failed (may already exist)" exception=e
+            # Try to update existing registry first
+            Pkg.Registry.update("NimbusRegistry")
+            @debug "Registry updated successfully"
+        catch
+            # If update fails, try to add it
+            try
+                Pkg.Registry.add(Pkg.RegistrySpec(url=registry_url))
+                @debug "Registry added successfully"
+            catch e
+                # Registry might already exist
+                @debug "Registry add failed (may already exist)" exception=e
+            end
         end
         
         # Install core package
         Pkg.add(CORE_NAME)
+        
+        # Verify installation
+        if !is_core_installed()
+            error("Installation completed but package not found. Try restarting Julia.")
+        end
         
         # Save API key for future use
         save_api_key(api_key)
@@ -117,6 +130,17 @@ function install_core(api_key::String; force::Bool=false)
         
         return true
     catch e
+        # Clean up credentials if installation failed
+        try
+            credentials_path = expanduser("~/.git-credentials")
+            if isfile(credentials_path)
+                rm(credentials_path)
+                @debug "Cleaned up credentials file after failed installation"
+            end
+        catch cleanup_error
+            @debug "Failed to clean up credentials" exception=cleanup_error
+        end
+        
         println("\n❌ Installation failed: $e")
         println("\nPlease contact hello@nimbusbci.com for support.")
         return false
@@ -166,7 +190,8 @@ function validate_license(api_key::String)
             "$(API_BASE)/auth/validate",
             ["Content-Type" => "application/json"],
             JSON3.write(Dict("api_key" => api_key));
-            status_exception=false
+            status_exception=false,
+            readtimeout=30
         )
         
         if response.status == 200
@@ -176,7 +201,11 @@ function validate_license(api_key::String)
             return (valid=false, license_type=nothing, features=nothing)
         end
     catch e
-        @warn "License validation failed" exception=e
+        if e isa HTTP.Exceptions.ConnectError || e isa HTTP.Exceptions.TimeoutError
+            @warn "Cannot reach license server - check internet connection" exception=e
+        else
+            @warn "License validation failed" exception=e
+        end
         # Fallback to basic format check
         if startswith(api_key, "nbci_") && length(api_key) > 20
             @warn "Using offline mode - API validation failed but key format is valid"
@@ -192,30 +221,42 @@ function get_github_token(api_key::String)
             "$(API_BASE)/installer/github-token",
             ["Content-Type" => "application/json"],
             JSON3.write(Dict("api_key" => api_key));
-            status_exception=false
+            status_exception=false,
+            readtimeout=30
         )
         
         if response.status == 200
             data = JSON3.read(response.body)
             return data.github_token
         else
-            error("Failed to obtain GitHub access token")
+            error("Failed to obtain GitHub access token (status: $(response.status))")
         end
     catch e
-        error("Failed to contact license server: $e")
+        if e isa HTTP.Exceptions.ConnectError || e isa HTTP.Exceptions.TimeoutError
+            error("Cannot reach license server - check internet connection: $e")
+        else
+            error("Failed to contact license server: $e")
+        end
     end
 end
 
 function setup_git_credentials(github_token::String)
     try
-        # Configure credential helper
-        run(pipeline(`git config --global credential.helper store`, devnull))
-        
-        # Write credentials
+        # Write credentials file FIRST (before running git config)
         credentials_path = expanduser("~/.git-credentials")
-        credentials = "https://$(github_token)@github.com\n"
+        credentials = "https://$(github_token):x-oauth-basic@github.com\n"
         write(credentials_path, credentials)
         chmod(credentials_path, 0o600)
+        
+        # Configure credential helper to use the store
+        # Use try-catch in case git is not available
+        try
+            run(`git config --global credential.helper store`)
+        catch
+            # Git might not be available in some environments
+            # Credentials file will still work for LibGit2 operations
+            @debug "Could not configure git credential.helper (git not available)"
+        end
     catch e
         @warn "Failed to configure Git credentials" exception=e
     end
