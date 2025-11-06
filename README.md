@@ -56,6 +56,7 @@ println("Mean confidence: ", mean(results.confidences))
 - 🎓 **Training & Calibration**: Train custom models on your data
 - ⚡ **Streaming & Batch**: Real-time or offline processing
 - 🎯 **Paradigm-Agnostic**: Motor Imagery, P300, SSVEP, custom protocols
+- 🎛️ **Hyperparameter Tuning** (v0.3.0+): Configure model priors for optimal performance
 - 📊 **Performance Metrics**: ITR, accuracy tracking, quality assessment
 
 ## Quick Example
@@ -99,7 +100,7 @@ println("Accuracy: $(round(accuracy * 100, digits=1))%, ITR: $(round(itr, digits
 ```julia
 using NimbusSDK
 
-# Train custom model
+# Train custom model with default hyperparameters
 model = train_model(
     RxLDAModel,
     training_data;  # BCIData with labels
@@ -107,9 +108,47 @@ model = train_model(
     name = "my_custom_model"
 )
 
+# Or tune hyperparameters for your specific dataset (v0.3.0+)
+model = train_model(
+    RxLDAModel,
+    training_data;
+    iterations = 50,
+    name = "tuned_model",
+    dof_offset = 2,              # Lower for better generalization
+    mean_prior_precision = 0.01  # Weak prior for data-driven learning
+)
+
 # Save for later use
 save_model(model, "models/custom_model.jld2")
 ```
+
+### Hyperparameter Tuning (v0.3.0+)
+
+Fine-tune model priors based on your data characteristics:
+
+**High SNR / Large Dataset**:
+```julia
+model = train_model(RxLDAModel, data;
+    dof_offset = 1,              # Minimal regularization
+    mean_prior_precision = 0.001 # Very weak prior
+)
+```
+
+**Low SNR / Small Dataset**:
+```julia
+model = train_model(RxLDAModel, data;
+    dof_offset = 3,             # More regularization
+    mean_prior_precision = 0.05 # Stronger prior
+)
+```
+
+**Available Hyperparameters**:
+- `dof_offset` (1-5): Controls covariance regularization
+- `mean_prior_precision` (0.001-0.1): Controls mean prior strength
+- `predictive_mean_prior` (1e4-1e8): Inference mean prior (advanced)
+- `predictive_dof_offset` (1-5): Inference DOF (advanced)
+
+See [full documentation](https://docs.nimbusbci.com) for tuning guidelines.
 
 ## Supported BCI Paradigms
 
