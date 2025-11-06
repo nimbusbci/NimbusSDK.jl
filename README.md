@@ -56,7 +56,7 @@ println("Mean confidence: ", mean(results.confidences))
 - 🎓 **Training & Calibration**: Train custom models on your data
 - ⚡ **Streaming & Batch**: Real-time or offline processing
 - 🎯 **Paradigm-Agnostic**: Motor Imagery, P300, SSVEP, custom protocols
-- 🎛️ **Hyperparameter Tuning** (v0.3.0+): Configure model priors for optimal performance
+- 🎛️ **Hyperparameter Tuning** (v0.2.0+): Configure model priors for optimal performance
 - 📊 **Performance Metrics**: ITR, accuracy tracking, quality assessment
 
 ## Quick Example
@@ -108,7 +108,7 @@ model = train_model(
     name = "my_custom_model"
 )
 
-# Or tune hyperparameters for your specific dataset (v0.3.0+)
+# Or tune hyperparameters for your specific dataset (v0.2.0+)
 model = train_model(
     RxLDAModel,
     training_data;
@@ -122,7 +122,7 @@ model = train_model(
 save_model(model, "models/custom_model.jld2")
 ```
 
-### Hyperparameter Tuning (v0.3.0+)
+### Hyperparameter Tuning (v0.2.0+)
 
 Fine-tune model priors based on your data characteristics:
 
