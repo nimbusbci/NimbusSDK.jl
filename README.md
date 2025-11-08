@@ -52,12 +52,13 @@ println("Mean confidence: ", mean(results.confidences))
 
 ## Features
 
-- 🧠 **Bayesian Inference**: RxLDA and RxGMM models with uncertainty quantification
+- 🧠 **Bayesian Inference**: RxLDA, RxGMM, and RxPolya models with uncertainty quantification
 - 🎓 **Training & Calibration**: Train custom models on your data
 - ⚡ **Streaming & Batch**: Real-time or offline processing
 - 🎯 **Paradigm-Agnostic**: Motor Imagery, P300, SSVEP, custom protocols
 - 🎛️ **Hyperparameter Tuning** (v0.2.0+): Configure model priors for optimal performance
 - 📊 **Performance Metrics**: ITR, accuracy tracking, quality assessment
+- 🆕 **RxPolya Model** (v0.3.0+): Bayesian Multinomial Probit Regression for advanced classification
 
 ## Quick Example
 
@@ -143,12 +144,41 @@ model = train_model(RxLDAModel, data;
 ```
 
 **Available Hyperparameters**:
+
+**RxLDA / RxGMM**:
 - `dof_offset` (1-5): Controls covariance regularization
 - `mean_prior_precision` (0.001-0.1): Controls mean prior strength
 - `predictive_mean_prior` (1e4-1e8): Inference mean prior (advanced)
 - `predictive_dof_offset` (1-5): Inference DOF (advanced)
 
+**RxPolya** (v0.3.0+):
+- `N` (1+): Number of trials per observation
+- `ξβ`: Prior mean for regression coefficients (auto-configured)
+- `Wβ`: Prior precision for regression coefficients (auto-configured)
+- `W_df`: Wishart degrees of freedom (auto-configured)
+- `W_scale`: Wishart scale matrix (auto-configured)
+
 See [full documentation](https://docs.nimbusbci.com) for tuning guidelines.
+
+### RxPolya Model Example (v0.3.0+)
+
+Train a Bayesian Multinomial Probit Regression model:
+
+```julia
+# RxPolya provides full uncertainty quantification over multinomial distributions
+model = train_model(
+    RxPolyaModel,
+    training_data;
+    iterations = 50,
+    N = 1,  # Trials per observation (1 for classification)
+    name = "polya_model"
+)
+
+# RxPolya is ideal for:
+# - Advanced classification with overlapping classes
+# - Full posterior uncertainty over class probabilities
+# - Multinomial count data
+```
 
 ## Supported BCI Paradigms
 
@@ -182,6 +212,7 @@ Visit [nimbusbci.com](https://nimbusbci.com) for:
 - Julia ≥ 1.9
 - Valid NimbusSDK license
 - Preprocessed EEG features (not raw EEG)
+- RxInfer.jl ≥ 4.0 (for RxPolya model support)
 
 ## FAQ
 

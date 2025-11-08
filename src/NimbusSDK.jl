@@ -37,7 +37,7 @@ using JSON3
 
 export install_core, check_installation
 export authenticate, predict_batch, load_model, save_model, train_model, calibrate_model
-export BCIData, BCIMetadata, RxLDAModel, RxGMMModel
+export BCIData, BCIMetadata, RxLDAModel, RxGMMModel, RxPolyaModel
 export init_streaming, process_chunk, finalize_trial
 export calculate_ITR, assess_trial_quality
 
