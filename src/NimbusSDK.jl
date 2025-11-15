@@ -96,27 +96,84 @@ function install_core(api_key::String; force::Bool=false)
     try
         # Add private registry
         registry_url = "https://github.com/$(GITHUB_ORG)/NimbusRegistry"
-        try
-            # Try to update existing registry first
-            Pkg.Registry.update("NimbusRegistry")
-            @debug "Registry updated successfully"
-        catch
-            # If update fails, try to add it
+        registry_name = "NimbusRegistry"
+        registry_added = false
+        
+        # Check if registry already exists
+        if is_registry_added(registry_name)
+            println("  ✓ Registry already exists, updating...")
             try
-                Pkg.Registry.add(Pkg.RegistrySpec(url=registry_url))
-                @debug "Registry added successfully"
+                Pkg.Registry.update(registry_name)
+                registry_added = true
+                println("  ✓ Registry updated")
             catch e
-                # Registry might already exist
-                @debug "Registry add failed (may already exist)" exception=e
+                @warn "Failed to update registry, will try to re-add" exception=e
+                registry_added = false
             end
         end
         
+        # If registry doesn't exist or update failed, add it
+        if !registry_added
+            println("  Adding NimbusRegistry...")
+            try
+                Pkg.Registry.add(Pkg.RegistrySpec(url=registry_url))
+                registry_added = true
+                println("  ✓ Registry added")
+            catch e
+                # Check if it was added despite the error (might have existed)
+                if is_registry_added(registry_name)
+                    registry_added = true
+                    println("  ✓ Registry already exists")
+                else
+                    error("""
+                    Failed to add NimbusRegistry. 
+                    
+                    Error: $e
+                    
+                    This might be due to:
+                    - Network connectivity issues
+                    - Git authentication problems
+                    - Registry URL access issues
+                    
+                    Please check your internet connection and try again.
+                    """)
+                end
+            end
+        end
+        
+        # Verify registry is accessible before proceeding
+        if !is_registry_added(registry_name)
+            error("""
+            NimbusRegistry was not successfully added.
+            
+            Please try:
+            1. Check your internet connection
+            2. Verify Git credentials are configured correctly
+            3. Try running: Pkg.Registry.add(RegistrySpec(url="$registry_url"))
+            """)
+        end
+        
         # Install core package
+        println("  Installing NimbusSDKCore...")
         Pkg.add(CORE_NAME)
         
         # Verify installation
         if !is_core_installed()
             error("Installation completed but package not found. Try restarting Julia.")
+        end
+        
+        # Verify installed version
+        try
+            @eval using NimbusSDKCore
+            installed_version = NimbusSDKCore.VERSION
+            println("  ✓ Installed NimbusSDKCore v$installed_version")
+            
+            # Check minimum version compatibility (0.4.0+)
+            if installed_version < v"0.4.0"
+                @warn "Installed NimbusSDKCore version $installed_version is older than recommended minimum (0.4.0)"
+            end
+        catch e
+            @warn "Could not verify installed version: $e"
         end
         
         # Save API key for future use
@@ -131,6 +188,7 @@ function install_core(api_key::String; force::Bool=false)
         return true
     catch e
         # Clean up credentials if installation failed
+        # Always cleanup on failure to prevent leaving credentials behind
         try
             credentials_path = expanduser("~/.git-credentials")
             if isfile(credentials_path)
@@ -179,6 +237,21 @@ function is_core_installed()
         spec = Pkg.PackageSpec(; uuid=CORE_UUID)
         Pkg.status(spec; io=devnull)
         return true
+    catch
+        return false
+    end
+end
+
+function is_registry_added(registry_name::String="NimbusRegistry")
+    try
+        # Check if registry exists by trying to get its info
+        registries = Pkg.Registry.reachable_registries()
+        for reg in registries
+            if reg.name == registry_name
+                return true
+            end
+        end
+        return false
     catch
         return false
     end
