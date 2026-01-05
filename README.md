@@ -5,9 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://docs.nimbusbci.com)
 
-🧠⚡ **The AI engine for BCI decisions under uncertainty.** Real-time and batch Brain-Computer Interface inference using Bayesian models.
+ **The AI engine for BCI decisions under uncertainty.** Real-time and batch Brain-Computer Interface inference using Bayesian models.
 
-## ⚠️ Commercial Software
+##  Commercial Software
 
 While this wrapper package is open source (MIT license), **NimbusSDKCore is commercial software** requiring a paid license from [nimbusbci.com](https://nimbusbci.com).
 
@@ -41,7 +41,7 @@ Once the core is installed, use it like any Julia package:
 using NimbusSDK
 
 # Load a pre-trained model
-model = load_model(RxLDAModel, "motor_imagery_4class")
+model = load_model(NimbusLDA, "motor_imagery_4class")
 
 # Run inference on your preprocessed EEG data
 results = predict_batch(model, your_bci_data)
@@ -52,13 +52,13 @@ println("Mean confidence: ", mean(results.confidences))
 
 ## Features
 
-- 🧠 **Bayesian Inference**: RxLDA, RxGMM, and RxPolya models with uncertainty quantification
-- 🎓 **Training & Calibration**: Train custom models on your data
-- ⚡ **Streaming & Batch**: Real-time or offline processing
-- 🎯 **Paradigm-Agnostic**: Motor Imagery, P300, SSVEP, custom protocols
-- 🎛️ **Hyperparameter Tuning** (v0.2.0+): Configure model priors for optimal performance
-- 📊 **Performance Metrics**: ITR, accuracy tracking, quality assessment
-- 🆕 **RxPolya Model** (v0.3.0+): Bayesian Multinomial Probit Regression for advanced classification
+-  **Bayesian Inference**: NimbusLDA, NimbusQDA, and NimbusProbit models with uncertainty quantification
+-  **Training & Calibration**: Train custom models on your data
+-  **Streaming & Batch**: Real-time or offline processing
+-  **Paradigm-Agnostic**: Motor Imagery, P300, SSVEP, custom protocols
+-  **Hyperparameter Tuning** (v0.2.0+): Configure model priors for optimal performance
+-  **Performance Metrics**: ITR, accuracy tracking, quality assessment
+- **NimbusProbit Model** (v0.5.0+): Bayesian Multinomial Probit Regression for advanced classification
 
 ## Quick Example
 
@@ -72,7 +72,7 @@ NimbusSDK.install_core("nbci_live_your_key")
 using NimbusSDK
 
 # Load model
-model = load_model(RxLDAModel, "motor_imagery_4class")
+model = load_model(NimbusLDA, "motor_imagery_4class")
 
 # Prepare data (must be preprocessed!)
 data = BCIData(
@@ -103,7 +103,7 @@ using NimbusSDK
 
 # Train custom model with default hyperparameters
 model = train_model(
-    RxLDAModel,
+    NimbusLDA,
     training_data;  # BCIData with labels
     iterations = 50,
     name = "my_custom_model"
@@ -111,7 +111,7 @@ model = train_model(
 
 # Or tune hyperparameters for your specific dataset (v0.2.0+)
 model = train_model(
-    RxLDAModel,
+    NimbusLDA,
     training_data;
     iterations = 50,
     name = "tuned_model",
@@ -129,7 +129,7 @@ Fine-tune model priors based on your data characteristics:
 
 **High SNR / Large Dataset**:
 ```julia
-model = train_model(RxLDAModel, data;
+model = train_model(NimbusLDA, data;
     dof_offset = 1,              # Minimal regularization
     mean_prior_precision = 0.001 # Very weak prior
 )
@@ -137,7 +137,7 @@ model = train_model(RxLDAModel, data;
 
 **Low SNR / Small Dataset**:
 ```julia
-model = train_model(RxLDAModel, data;
+model = train_model(NimbusLDA, data;
     dof_offset = 3,             # More regularization
     mean_prior_precision = 0.05 # Stronger prior
 )
@@ -145,13 +145,13 @@ model = train_model(RxLDAModel, data;
 
 **Available Hyperparameters**:
 
-**RxLDA / RxGMM**:
+**NimbusLDA / NimbusQDA**:
 - `dof_offset` (1-5): Controls covariance regularization
 - `mean_prior_precision` (0.001-0.1): Controls mean prior strength
 - `predictive_mean_prior` (1e4-1e8): Inference mean prior (advanced)
 - `predictive_dof_offset` (1-5): Inference DOF (advanced)
 
-**RxPolya** (v0.3.0+):
+**NimbusProbit** (v0.3.0+):
 - `N` (1+): Number of trials per observation
 - `ξβ`: Prior mean for regression coefficients (auto-configured)
 - `Wβ`: Prior precision for regression coefficients (auto-configured)
@@ -160,21 +160,21 @@ model = train_model(RxLDAModel, data;
 
 See [full documentation](https://docs.nimbusbci.com) for tuning guidelines.
 
-### RxPolya Model Example (v0.3.0+)
+### NimbusProbit Model Example (v0.5.0+)
 
 Train a Bayesian Multinomial Probit Regression model:
 
 ```julia
-# RxPolya provides full uncertainty quantification over multinomial distributions
+# NimbusProbit provides full uncertainty quantification over multinomial distributions
 model = train_model(
-    RxPolyaModel,
+    NimbusProbit,
     training_data;
     iterations = 50,
     N = 1,  # Trials per observation (1 for classification)
     name = "polya_model"
 )
 
-# RxPolya is ideal for:
+# NimbusProbit is ideal for:
 # - Advanced classification with overlapping classes
 # - Full posterior uncertainty over class probabilities
 # - Multinomial count data
@@ -212,7 +212,7 @@ Visit [nimbusbci.com](https://nimbusbci.com) for:
 - Julia ≥ 1.9
 - Valid NimbusSDK license
 - Preprocessed EEG features (not raw EEG)
-- RxInfer.jl ≥ 4.0 (for RxPolya model support)
+- RxInfer.jl ≥ 4.0 (for NimbusProbit model support)
 
 ## FAQ
 
@@ -246,5 +246,5 @@ NimbusSDK is developed by the Nimbus BCI team. We provide production-ready Bayes
 
 ---
 
-**Get started today**: [nimbusbci.com](https://nimbusbci.com) 🧠⚡
+**Get started today**: [nimbusbci.com](https://nimbusbci.com) 
 

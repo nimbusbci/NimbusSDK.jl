@@ -23,7 +23,7 @@ After installing the core, simply:
 ```julia
 using NimbusSDK
 
-model = load_model(RxLDAModel, "motor_imagery_4class")
+model = load_model(NimbusLDA, "motor_imagery_4class")
 results = predict_batch(model, your_data)
 ```
 
@@ -37,7 +37,7 @@ using JSON3
 
 export install_core, check_installation
 export authenticate, predict_batch, load_model, save_model, train_model, calibrate_model
-export BCIData, BCIMetadata, RxLDAModel, RxGMMModel, RxPolyaModel
+export BCIData, BCIMetadata, NimbusLDA, NimbusQDA, NimbusProbit
 export init_streaming, process_chunk, finalize_trial
 export calculate_ITR, assess_trial_quality
 
@@ -69,7 +69,7 @@ function install_core(api_key::String; force::Bool=false)
     end
     
     println("\n╔════════════════════════════════════════╗")
-    println("║   🚀 Installing NimbusSDKCore          ║")
+    println("║   Installing NimbusSDKCore             ║")
     println("╚════════════════════════════════════════╝\n")
     
     # Step 1: Validate API key
@@ -78,17 +78,17 @@ function install_core(api_key::String; force::Bool=false)
     if !license_info.valid
         error("Invalid license key. Please check your key at https://nimbusbci.com/dashboard")
     end
-    println("  ✓ License valid: $(license_info.license_type)")
+    println("  [OK] License valid: $(license_info.license_type)")
     
     # Step 2: Get GitHub access token
     println("\n[2/4] Obtaining repository access...")
     github_token = get_github_token(api_key)
-    println("  ✓ Access granted")
+    println("  [OK] Access granted")
     
     # Step 3: Configure Git
     println("\n[3/4] Configuring Git access...")
     setup_git_credentials(github_token)
-    println("  ✓ Git configured")
+    println("  [OK] Git configured")
     
     # Step 4: Install packages
     println("\n[4/4] Installing NimbusSDKCore...")
@@ -101,11 +101,11 @@ function install_core(api_key::String; force::Bool=false)
         
         # Check if registry already exists
         if is_registry_added(registry_name)
-            println("  ✓ Registry already exists, updating...")
+            println("  [OK] Registry already exists, updating...")
             try
                 Pkg.Registry.update(registry_name)
                 registry_added = true
-                println("  ✓ Registry updated")
+                println("  [OK] Registry updated")
             catch e
                 @warn "Failed to update registry, will try to re-add" exception=e
                 registry_added = false
@@ -118,12 +118,12 @@ function install_core(api_key::String; force::Bool=false)
             try
                 Pkg.Registry.add(Pkg.RegistrySpec(url=registry_url))
                 registry_added = true
-                println("  ✓ Registry added")
+                println("  [OK] Registry added")
             catch e
                 # Check if it was added despite the error (might have existed)
                 if is_registry_added(registry_name)
                     registry_added = true
-                    println("  ✓ Registry already exists")
+                    println("  [OK] Registry already exists")
                 else
                     error("""
                     Failed to add NimbusRegistry. 
@@ -166,11 +166,11 @@ function install_core(api_key::String; force::Bool=false)
         try
             @eval using NimbusSDKCore
             installed_version = NimbusSDKCore.VERSION
-            println("  ✓ Installed NimbusSDKCore v$installed_version")
+            println("  [OK] Installed NimbusSDKCore v$installed_version")
             
-            # Check minimum version compatibility (0.4.0+)
-            if installed_version < v"0.4.0"
-                @warn "Installed NimbusSDKCore version $installed_version is older than recommended minimum (0.4.0)"
+            # Check minimum version compatibility (0.5.0+)
+            if installed_version < v"0.5.0"
+                @warn "Installed NimbusSDKCore version $installed_version is older than recommended minimum (0.5.0)"
             end
         catch e
             @warn "Could not verify installed version: $e"
@@ -179,10 +179,10 @@ function install_core(api_key::String; force::Bool=false)
         # Save API key for future use
         save_api_key(api_key)
         
-        println("\n✅ Installation complete!")
+        println("\nInstallation complete!")
         println("\nYou can now use NimbusSDK:")
         println("  julia> using NimbusSDK")
-        println("  julia> model = load_model(RxLDAModel, \"model_name\")")
+        println("  julia> model = load_model(NimbusLDA, \"model_name\")")
         println("\nDocumentation: https://docs.nimbusbci.com")
         
         return true
@@ -199,7 +199,7 @@ function install_core(api_key::String; force::Bool=false)
             @debug "Failed to clean up credentials" exception=cleanup_error
         end
         
-        println("\n❌ Installation failed: $e")
+        println("\nInstallation failed: $e")
         println("\nPlease contact hello@nimbusbci.com for support.")
         return false
     end
@@ -215,14 +215,14 @@ function check_installation()
         try
             @eval using NimbusSDKCore
             version = NimbusSDKCore.VERSION
-            println("✓ NimbusSDKCore $version is installed and ready")
+            println("[OK] NimbusSDKCore $version is installed and ready")
             return true
         catch e
-            println("⚠ NimbusSDKCore is installed but failed to load: $e")
+            println("[FAIL] NimbusSDKCore is installed but failed to load: $e")
             return false
         end
     else
-        println("✗ NimbusSDKCore is not installed")
+        println("[FAIL] NimbusSDKCore is not installed")
         println("\nInstall with:")
         println("  NimbusSDK.install_core(\"your-api-key\")")
         return false
